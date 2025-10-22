@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 4000;
 const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:4000',
+  'http://realestate.ltx.mx',
   'https://realestate.ltx.mx',
   'https://www.realestate.ltx.mx',
   'https://realstate-backend-sgc6.onrender.com',
@@ -43,8 +44,20 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Servir archivos estáticos (imágenes)
-app.use('/uploads', express.static('uploads'));
+// ✅ CORREGIDO: Servir archivos estáticos con headers CORS correctos
+app.use('/uploads', (req, res, next) => {
+  // Configurar headers CORS específicos para imágenes
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Cache-Control', 'public, max-age=31557600'); // Cache por 1 año
+  next();
+}, express.static('uploads', {
+  maxAge: '1y', // Cache
+  etag: true,
+  lastModified: true
+}));
 
 // Rutas principales
 app.use('/api/auth', authRoutes);

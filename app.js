@@ -12,9 +12,27 @@ require('./config/associations'); // Configurar asociaciones entre modelos
 const app = express();
 const PORT = config.port;
 
+// Configuración de CORS para múltiples orígenes
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://realestate.ltx.mx',
+  'http://realestate.ltx.mx',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:4200',
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (Postman, curl, apps móviles)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS bloqueado para origen: ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
