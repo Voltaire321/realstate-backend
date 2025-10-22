@@ -9,11 +9,11 @@ const MagicCode = require('../models/MagicCode');
 
 const router = express.Router();
 
-// Configuración de Nodemailer para Gmail con timeout
+// Configuración de Nodemailer para Gmail con puerto 465 (SSL)
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true para 465, false para otros puertos
+  port: 465,
+  secure: true, // true para 465 (SSL)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
