@@ -1,0 +1,79 @@
+# Dependencias
+node_modules/
+package-lock.json
+
+# Variables de entorno
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Archivos de logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Archivos de sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Archivos de prueba
+coverage/
+.nyc_output/
+test-results/
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Archivos de build
+dist/
+build/
+out/
+
+# Archivos subidos por usuarios (mantén la carpeta pero no el contenido)
+uploads/*
+!uploads/.gitkeep
+
+# Bases de datos locales
+*.sqlite
+*.sqlite3
+*.db
+
+# Archivos obsoletos (opcional - puedes descomentar si los mueves a esta carpeta)
+# obsolete/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Archivos de backup
+*.bak
+*.backup
+*~
