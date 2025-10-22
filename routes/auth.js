@@ -9,7 +9,7 @@ const MagicCode = require('../models/MagicCode');
 
 const router = express.Router();
 
-// Configuración de Nodemailer para Gmail
+// Configuración de Nodemailer para Gmail con timeout
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
@@ -20,7 +20,10 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false
-  }
+  },
+  connectionTimeout: 10000, // 10 segundos
+  greetingTimeout: 10000, // 10 segundos
+  socketTimeout: 15000 // 15 segundos
 });
 
 // Middleware para verificar JWT
@@ -189,28 +192,44 @@ router.post('/magic-link', async (req, res) => {
     };
     
     console.log('📮 Intentando enviar email...');
+    console.log('📧 Desde:', process.env.EMAIL_USER);
+    console.log('📧 Hacia:', email);
+
+    // Agregar timeout manual de 20 segundos
+    const sendEmailWithTimeout = () => {
+      return Promise.race([
+        transporter.sendMail(mailOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email timeout - no response from SMTP server after 20 seconds')), 20000)
+        )
+      ]);
+    };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const info = await sendEmailWithTimeout();
       console.log(`✅ Código ${code} enviado EXITOSAMENTE por email a ${email}`);
       console.log(`📧 ID del mensaje: ${info.messageId}`);
+      console.log(`📧 Response: ${info.response}`);
       console.log('🔐 === MAGIC LINK SUCCESS ===');
       
       res.json({ 
         message: 'Código enviado exitosamente a tu correo electrónico'
       });
     } catch (emailError) {
-      console.error('❌ ERROR ENVIANDO EMAIL:', emailError);
-      console.error('Detalles del error:', emailError.message);
-      console.error('Código de error:', emailError.code);
+      console.error('❌ === EMAIL ERROR ===');
+      console.error('Error completo:', emailError);
+      console.error('Mensaje:', emailError.message);
+      console.error('Código:', emailError.code);
+      console.error('Comando:', emailError.command);
       console.error('Respuesta del servidor:', emailError.response);
+      console.error('Respuesta rechazada:', emailError.responseCode);
       
       // Eliminar el código generado si el email falló
       await MagicCode.destroy({ where: { email } });
       
       // Devolver error al frontend
       return res.status(500).json({ 
-        message: 'Error al enviar el código por correo. Por favor, verifica tu configuración de email o intenta más tarde.',
+        message: 'Error al enviar el código por correo. Verifica que el correo electrónico esté bien configurado.',
         error: 'EMAIL_SEND_FAILED',
         details: emailError.message
       });
