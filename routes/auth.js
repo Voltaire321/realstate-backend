@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { Op } = require('sequelize');
 
 const User = require('../models/User');
@@ -9,22 +9,8 @@ const MagicCode = require('../models/MagicCode');
 
 const router = express.Router();
 
-// Configuración de Nodemailer para Gmail con puerto 465 (SSL)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true para 465 (SSL)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 segundos
-  greetingTimeout: 10000, // 10 segundos
-  socketTimeout: 15000 // 15 segundos
-});
+// Configuración de Resend (reemplaza Nodemailer)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Middleware para verificar JWT
 const authenticateToken = (req, res, next) => {
@@ -169,47 +155,38 @@ router.post('/magic-link', async (req, res) => {
     
     console.log(`🎲 Código generado: ${code}`);
     console.log('💾 Código guardado en BD');
-
-    // Enviar email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Código de acceso - Criss Vargas',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Código de Acceso</h2>
-          <p>Hola,</p>
-          <p>Tu código de acceso es:</p>
-          <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">${code}</h1>
-          </div>
-          <p>Este código expira en 10 minutos.</p>
-          <p>Si no solicitaste este código, puedes ignorar este email.</p>
-          <br>
-          <p>Saludos,<br>Equipo Criss Vargas</p>
-        </div>
-      `
-    };
     
-    console.log('📮 Intentando enviar email...');
-    console.log('📧 Desde:', process.env.EMAIL_USER);
+    console.log('📮 Intentando enviar email con Resend...');
     console.log('📧 Hacia:', email);
-
-    // Agregar timeout manual de 20 segundos
-    const sendEmailWithTimeout = () => {
-      return Promise.race([
-        transporter.sendMail(mailOptions),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email timeout - no response from SMTP server after 20 seconds')), 20000)
-        )
-      ]);
-    };
+    console.log('🔑 API Key configurada:', process.env.RESEND_API_KEY ? 'SÍ ✅' : 'NO ❌');
 
     try {
-      const info = await sendEmailWithTimeout();
+      const { data, error } = await resend.emails.send({
+        from: 'Criss Vargas <onboarding@resend.dev>',
+        to: [email],
+        subject: 'Código de acceso - Criss Vargas',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Código de Acceso</h2>
+            <p>Hola,</p>
+            <p>Tu código de acceso es:</p>
+            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">${code}</h1>
+            </div>
+            <p>Este código expira en 10 minutos.</p>
+            <p>Si no solicitaste este código, puedes ignorar este email.</p>
+            <br>
+            <p>Saludos,<br>Equipo Criss Vargas</p>
+          </div>
+        `
+      });
+
+      if (error) {
+        throw error;
+      }
+
       console.log(`✅ Código ${code} enviado EXITOSAMENTE por email a ${email}`);
-      console.log(`📧 ID del mensaje: ${info.messageId}`);
-      console.log(`📧 Response: ${info.response}`);
+      console.log(`📧 ID del mensaje:`, data.id);
       console.log('🔐 === MAGIC LINK SUCCESS ===');
       
       res.json({ 
@@ -219,17 +196,13 @@ router.post('/magic-link', async (req, res) => {
       console.error('❌ === EMAIL ERROR ===');
       console.error('Error completo:', emailError);
       console.error('Mensaje:', emailError.message);
-      console.error('Código:', emailError.code);
-      console.error('Comando:', emailError.command);
-      console.error('Respuesta del servidor:', emailError.response);
-      console.error('Respuesta rechazada:', emailError.responseCode);
       
       // Eliminar el código generado si el email falló
       await MagicCode.destroy({ where: { email } });
       
       // Devolver error al frontend
       return res.status(500).json({ 
-        message: 'Error al enviar el código por correo. Verifica que el correo electrónico esté bien configurado.',
+        message: 'Error al enviar el código por correo. Por favor intenta más tarde.',
         error: 'EMAIL_SEND_FAILED',
         details: emailError.message
       });
