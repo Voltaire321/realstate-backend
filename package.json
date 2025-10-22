@@ -9,6 +9,7 @@
     "dev:watch": "nodemon app-fixed.js",
     "dev:simple": "node app-dev.js",
     "insert-data": "node scripts/insert-initial-data.js",
+    "build": "echo 'No build step required for Node.js'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

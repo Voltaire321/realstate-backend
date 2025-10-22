@@ -10,8 +10,25 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://realestate.ltx.mx',
+  'https://www.realestate.ltx.mx',
+  process.env.FRONTEND_URL
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -109,10 +126,11 @@ const startServer = async () => {
     await syncDatabase();
 
     // Iniciar servidor
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
       console.log(`📡 URL: http://localhost:${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('❌ Error iniciando servidor:', error);
