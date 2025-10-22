@@ -9,7 +9,7 @@ const propertyRoutes = require('./routes/properties');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middleware CORS - ACTUALIZADO
+// Middleware
 const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:4000',
@@ -17,41 +17,75 @@ const allowedOrigins = [
   'https://www.realestate.ltx.mx',
   'https://realstate-backend-sgc6.onrender.com', // ⚠️ AGREGAR TU BACKEND DE RENDER
   process.env.FRONTEND_URL
-].filter(Boolean); // Elimina valores undefined
+].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir requests sin origin (mobile apps, postman, curl, etc.)
+    // Permitir requests sin origin (mobile apps, postman, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked origin:', origin);
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-// IMPORTANTE: Agregar headers CORS adicionales para preflight
-app.options('*', cors());
-
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos (imágenes)
 app.use('/uploads', express.static('uploads'));
 
-// Rutas principales
+// Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 
-// ⚠️ ELIMINAR O COMENTAR ESTAS RUTAS DUPLICADAS
-// app.use('/properties', propertyRoutes); // Esto causa rutas duplicadas
+// Rutas adicionales para compatibilidad con frontend
+app.use('/properties', propertyRoutes);
+
+// Ruta temporal sin autenticación para pruebas
+app.post('/properties-test', async (req, res) => {
+  try {
+    const propertyData = req.body;
+    
+    // Validar campos requeridos
+    if (!propertyData.titulo || !propertyData.tipo || !propertyData.precio) {
+      return res.status(400).json({
+        success: false,
+        message: 'Título, tipo y precio son campos requeridos'
+      });
+    }
+
+    // Simular creación de propiedad (sin base de datos por ahora)
+    const mockProperty = {
+      id: Math.floor(Math.random() * 1000),
+      titulo: propertyData.titulo,
+      descripcion: propertyData.descripcion || null,
+      tipo: propertyData.tipo,
+      precio: propertyData.precio,
+      tag: propertyData.tag || null,
+      estado: 'activa',
+      created_at: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'Propiedad creada exitosamente (modo prueba)',
+      data: mockProperty
+    });
+  } catch (error) {
+    console.error('Error creando propiedad (prueba):', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error interno del servidor' 
+    });
+  }
+});
 
 // Ruta de prueba
 app.get('/api/health', (req, res) => {
@@ -59,35 +93,22 @@ app.get('/api/health', (req, res) => {
     message: 'Servidor funcionando correctamente',
     database: 'MySQL',
     port: PORT,
-    timestamp: new Date().toISOString(),
-    allowedOrigins: allowedOrigins
+    timestamp: new Date().toISOString()
   });
 });
 
-// ...existing code...
-
-// Manejo de errores CORS
+// Manejo de errores
 app.use((err, req, res, next) => {
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({ 
-      success: false,
-      message: 'CORS Error: Origin not allowed',
-      origin: req.headers.origin 
-    });
-  }
-  
   console.error('Error:', err.stack);
   res.status(500).json({ 
-    success: false,
     message: 'Error interno del servidor',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal!'
   });
 });
 
-// Ruta 404
+// Ruta 404 - usando una ruta específica en lugar de wildcard
 app.use((req, res) => {
   res.status(404).json({ 
-    success: false,
     message: 'Ruta no encontrada',
     path: req.originalUrl 
   });
@@ -109,8 +130,9 @@ const startServer = async () => {
     // Iniciar servidor
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-      console.log(`📡 Environment: ${process.env.NODE_ENV || 'production'}`);
-      console.log(`🌍 CORS permitido para:`, allowedOrigins);
+      console.log(`📡 URL: http://localhost:${PORT}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('❌ Error iniciando servidor:', error);
