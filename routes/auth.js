@@ -130,6 +130,11 @@ router.post('/login', async (req, res) => {
 router.post('/magic-link', async (req, res) => {
   try {
     const { email } = req.body;
+    
+    console.log('🔐 === MAGIC LINK REQUEST ===');
+    console.log('📧 Email solicitado:', email);
+    console.log('📬 EMAIL_USER configurado:', process.env.EMAIL_USER ? 'SÍ ✅' : 'NO ❌');
+    console.log('🔑 EMAIL_PASS configurado:', process.env.EMAIL_PASS ? 'SÍ ✅' : 'NO ❌');
 
     if (!email) {
       return res.status(400).json({ message: 'Email es requerido' });
@@ -138,11 +143,14 @@ router.post('/magic-link', async (req, res) => {
     // Verificar si el usuario existe
     const existingUser = await User.findOne({ where: { email } });
     if (!existingUser) {
+      console.log('❌ Usuario NO encontrado en BD');
       return res.status(404).json({ 
         message: 'Correo no registrado.',
         code: 'USER_NOT_FOUND'
       });
     }
+    
+    console.log('✅ Usuario encontrado en BD');
 
     // Generar código de 5 dígitos
     const code = Math.floor(10000 + Math.random() * 90000).toString();
@@ -155,6 +163,9 @@ router.post('/magic-link', async (req, res) => {
       email,
       code
     });
+    
+    console.log(`🎲 Código generado: ${code}`);
+    console.log('💾 Código guardado en BD');
 
     // Enviar email
     const mailOptions = {
@@ -176,11 +187,14 @@ router.post('/magic-link', async (req, res) => {
         </div>
       `
     };
+    
+    console.log('📮 Intentando enviar email...');
 
     try {
       const info = await transporter.sendMail(mailOptions);
       console.log(`✅ Código ${code} enviado EXITOSAMENTE por email a ${email}`);
       console.log(`📧 ID del mensaje: ${info.messageId}`);
+      console.log('🔐 === MAGIC LINK SUCCESS ===');
       
       res.json({ 
         message: 'Código enviado exitosamente a tu correo electrónico'
@@ -188,21 +202,17 @@ router.post('/magic-link', async (req, res) => {
     } catch (emailError) {
       console.error('❌ ERROR ENVIANDO EMAIL:', emailError);
       console.error('Detalles del error:', emailError.message);
+      console.error('Código de error:', emailError.code);
+      console.error('Respuesta del servidor:', emailError.response);
       
-      // Mostrar el código en consola como fallback
-      console.log(`\n${'='.repeat(60)}`);
-      console.log(`🔑 CÓDIGO MAGIC LINK (FALLBACK - EMAIL FALLÓ)`);
-      console.log(`📧 Email: ${email}`);
-      console.log(`🔢 Código: ${code}`);
-      console.log(`⏰ Expira en: 10 minutos`);
-      console.log(`❗ CONFIGURA CORRECTAMENTE TU EMAIL_USER Y EMAIL_PASS EN .env`);
-      console.log(`${'='.repeat(60)}\n`);
+      // Eliminar el código generado si el email falló
+      await MagicCode.destroy({ where: { email } });
       
-      // En caso de error, responder con el código en desarrollo
-      res.json({ 
-        message: 'Código generado (revisa la consola del servidor)',
-        devCode: code,
-        warning: 'El email no pudo ser enviado. Verifica tu configuración de EMAIL_USER y EMAIL_PASS'
+      // Devolver error al frontend
+      return res.status(500).json({ 
+        message: 'Error al enviar el código por correo. Por favor, verifica tu configuración de email o intenta más tarde.',
+        error: 'EMAIL_SEND_FAILED',
+        details: emailError.message
       });
     }
   } catch (error) {
