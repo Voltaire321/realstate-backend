@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 const { Op } = require('sequelize');
 
 const User = require('../models/User');
@@ -9,8 +9,8 @@ const MagicCode = require('../models/MagicCode');
 
 const router = express.Router();
 
-// Configuración de Resend (reemplaza Nodemailer)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configuración de SendGrid
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Middleware para verificar JWT
 const authenticateToken = (req, res, next) => {
@@ -156,14 +156,14 @@ router.post('/magic-link', async (req, res) => {
     console.log(`🎲 Código generado: ${code}`);
     console.log('💾 Código guardado en BD');
     
-    console.log('📮 Intentando enviar email con Resend...');
+    console.log('📮 Intentando enviar email con SendGrid...');
     console.log('📧 Hacia:', email);
-    console.log('🔑 API Key configurada:', process.env.RESEND_API_KEY ? 'SÍ ✅' : 'NO ❌');
+    console.log('🔑 API Key configurada:', process.env.SENDGRID_API_KEY ? 'SÍ ✅' : 'NO ❌');
 
     try {
-      const { data, error } = await resend.emails.send({
-        from: 'Criss Vargas <onboarding@resend.dev>',
-        to: [email],
+      const msg = {
+        to: email,
+        from: 'cesaraepena@gmail.com', // Tu email verificado en SendGrid
         subject: 'Código de acceso - Criss Vargas',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -179,14 +179,11 @@ router.post('/magic-link', async (req, res) => {
             <p>Saludos,<br>Equipo Criss Vargas</p>
           </div>
         `
-      });
+      };
 
-      if (error) {
-        throw error;
-      }
+      await sgMail.send(msg);
 
       console.log(`✅ Código ${code} enviado EXITOSAMENTE por email a ${email}`);
-      console.log(`📧 ID del mensaje:`, data.id);
       console.log('🔐 === MAGIC LINK SUCCESS ===');
       
       res.json({ 
@@ -196,6 +193,7 @@ router.post('/magic-link', async (req, res) => {
       console.error('❌ === EMAIL ERROR ===');
       console.error('Error completo:', emailError);
       console.error('Mensaje:', emailError.message);
+      console.error('Response body:', emailError.response?.body);
       
       // Eliminar el código generado si el email falló
       await MagicCode.destroy({ where: { email } });
