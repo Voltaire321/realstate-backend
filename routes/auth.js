@@ -163,21 +163,47 @@ router.post('/magic-link', async (req, res) => {
     try {
       const msg = {
         to: email,
-        from: 'noreply.crissvargas@gmail.com', // Tu email verificado en SendGrid
-        subject: 'Código de acceso - Criss Vargas',
+        from: {
+          email: 'noreply.crissvargas@gmail.com',
+          name: 'Criss Vargas Real Estate'
+        },
+        replyTo: 'noreply.crissvargas@gmail.com',
+        subject: 'Tu código de acceso',
+        text: `Hola,\n\nTu código de acceso es: ${code}\n\nEste código expira en 10 minutos.\n\nSi no solicitaste este código, puedes ignorar este email.\n\nSaludos,\nEquipo Criss Vargas`,
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Código de Acceso</h2>
-            <p>Hola,</p>
-            <p>Tu código de acceso es:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">${code}</h1>
-            </div>
-            <p>Este código expira en 10 minutos.</p>
-            <p>Si no solicitaste este código, puedes ignorar este email.</p>
-            <br>
-            <p>Saludos,<br>Equipo Criss Vargas</p>
-          </div>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Código de Acceso</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f7f7f7;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="padding: 40px 30px;">
+                        <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Código de Acceso</h2>
+                        <p style="color: #666666; margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">Hola,</p>
+                        <p style="color: #666666; margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">Has solicitado acceder a tu cuenta. Tu código de acceso es:</p>
+                        <div style="background-color: #f4f4f4; padding: 30px; text-align: center; margin: 30px 0; border-radius: 8px;">
+                          <p style="color: #007bff; font-size: 36px; font-weight: bold; margin: 0; letter-spacing: 8px;">${code}</p>
+                        </div>
+                        <p style="color: #666666; margin: 0 0 10px 0; font-size: 14px; line-height: 1.5;">Este código expira en 10 minutos.</p>
+                        <p style="color: #999999; margin: 20px 0 0 0; font-size: 13px; line-height: 1.5;">Si no solicitaste este código, puedes ignorar este email de forma segura.</p>
+                        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0;">
+                        <p style="color: #666666; margin: 0; font-size: 14px;">Saludos,<br><strong>Equipo Criss Vargas</strong></p>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="color: #999999; margin: 20px 0 0 0; font-size: 12px; text-align: center;">© 2025 Criss Vargas Real Estate. Todos los derechos reservados.</p>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
         `
       };
 
