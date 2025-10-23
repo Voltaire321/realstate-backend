@@ -163,7 +163,7 @@ router.post('/magic-link', async (req, res) => {
     try {
       const msg = {
         to: email,
-        from: 'cesaraepena@gmail.com', // Tu email verificado en SendGrid
+        from: 'noreply.crissvargas@gmail.com', // Tu email verificado en SendGrid
         subject: 'Código de acceso - Criss Vargas',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
